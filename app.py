@@ -63,7 +63,7 @@ async def run_simulations_parallel(attack_decks, defense_decks):
 
     with tqdm(total=total_simulations, desc="Simulations Progress", unit="sim") as pbar:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)  # No --no-sandbox argument
+            browser = await p.chromium.launch(headless=False)  # No --no-sandbox argument
             context = await browser.new_context()
             tasks = [simulate_pair(pair, context, semaphore, pbar) for pair in deck_pairs]
             results = await asyncio.gather(*tasks)
