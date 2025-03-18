@@ -90,7 +90,7 @@ async def optimize_defense(attack_decks, defense_deck_hash):
         if card_hash in seen_card_hashes:
             continue
         seen_card_hashes.add(card_hash)
-        modified_deck = defense_deck_hash.replace(card_hash, "")
+        modified_deck = defense_deck_hash.replace(card_hash, "",1)
         modified_decks.append(modified_deck)
         removed_cards.append(card_hash)
 
