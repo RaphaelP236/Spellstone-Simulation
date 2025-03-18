@@ -6,8 +6,14 @@ from tqdm.asyncio import tqdm
 import nest_asyncio
 import subprocess
 
-# Ensure Playwright browser binaries are installed
-subprocess.run(["python", "-m", "playwright", "install"])
+# Ensure Playwright is installed and necessary browsers are available
+try:
+    import playwright
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
+
+# Install the necessary browser binaries
+subprocess.check_call([sys.executable, "-m", "playwright", "install"])
 
 
 if sys.platform == "win32":
