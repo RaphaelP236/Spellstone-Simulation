@@ -4,6 +4,10 @@ import sys
 from playwright.async_api import async_playwright
 from tqdm.asyncio import tqdm
 import nest_asyncio
+import subprocess
+
+# Ensure Playwright browser binaries are installed
+subprocess.run(["python", "-m", "playwright", "install"])
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -59,7 +63,7 @@ async def run_simulations_parallel(attack_decks, defense_decks):
 
     with tqdm(total=total_simulations, desc="Simulations Progress", unit="sim") as pbar:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=["--disable-gpu", "--no-sandbox"])
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
             context = await browser.new_context()
             tasks = [simulate_pair(pair, context, semaphore, pbar) for pair in deck_pairs]
             results = await asyncio.gather(*tasks)
