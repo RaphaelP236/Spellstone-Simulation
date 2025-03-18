@@ -9,6 +9,7 @@ import subprocess
 # Ensure Playwright browser binaries are installed
 subprocess.run(["python", "-m", "playwright", "install"])
 
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 nest_asyncio.apply()
@@ -63,7 +64,7 @@ async def run_simulations_parallel(attack_decks, defense_decks):
 
     with tqdm(total=total_simulations, desc="Simulations Progress", unit="sim") as pbar:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)  # No --no-sandbox argument
+            browser = await p.chromium.launch(headless=True)  # No --no-sandbox argument
             context = await browser.new_context()
             tasks = [simulate_pair(pair, context, semaphore, pbar) for pair in deck_pairs]
             results = await asyncio.gather(*tasks)
