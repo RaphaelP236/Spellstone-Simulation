@@ -23,7 +23,7 @@ nest_asyncio.apply()
 
 # Define constants
 bge = "9C!C"
-tower_type = 506
+tower_type = 501
 
 
 async def load_page_with_retry(page, url, retries=3):
@@ -106,40 +106,69 @@ async def optimize_defense(attack_decks, defense_deck_hash):
             float(winrate.strip('%')) for attack, defense, winrate in results if defense == modified_deck and winrate)
         avg_winrates[removed_cards[i]] = total_winrate / len(attack_decks)
 
-    weakest_card = min(avg_winrates, key=avg_winrates.get)
-    weakest_card_index = removed_cards.index(weakest_card)
 
-    return avg_winrate, weakest_card, avg_winrates[weakest_card], modified_decks[weakest_card_index]
+    return avg_winrate, avg_winrates, removed_cards
 
 
 async def run_optimization(attack_decks, defense_deck_hash):
     return await optimize_defense(attack_decks, defense_deck_hash)
 
 
+st.set_page_config(layout="wide")  # Ensure full-width layout
+
+
+
 def main():
-    st.title("Defense Deck Optimizer")
-    st.write("Optimize your defense deck by identifying the weakest card.")
+    st.title("Family Simulation Tool")
+    # Create two columns for layout
+    col1, col2 = st.columns(2)  # Left (narrower) | Right (wider)
 
-    attack_decks_input = st.text_area("Enter Attack Deck Hashes (one per line)")
-    defense_deck_hash = st.text_input("Enter Defense Deck Hash")
 
-    if st.button("Run Optimization"):
-        if not attack_decks_input or not defense_deck_hash:
-            st.error("Please enter both attack deck hashes and a defense deck hash.")
-            return
+    # Input fields and Run button (Left side)
+    with col1:
+        st.header("Inputs")
+        defense_deck_hash = st.text_input("Your deck")
+        attack_decks_input = st.text_area("Opponents decks (one per line per hash)")
+        st.radio("What deck do you want to optimze?",["Offence", "Defence"])
+        c1, c2 = st.columns(2)
+        with c1:
+            run_button_cards = st.button("Run Card Optimization")
+        with c2:
+            run_button_hero = st.button("Run Hero Optimization")
 
-        attack_decks = [line.strip() for line in attack_decks_input.split("\n") if line.strip()]
+    # Results (Right side)
+    with col2:
+        st.header("Results")
 
-        with st.spinner("Running simulations... this may take a while."):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            avg_winrate, weakest_card, new_winrate, new_deck_hash = loop.run_until_complete(
-                run_optimization(attack_decks, defense_deck_hash)
+        if run_button_cards:
+            if not attack_decks_input or not defense_deck_hash:
+                st.error("Please enter both attack deck hashes and a defense deck hash.")
+            else:
+                attack_decks = [line.strip() for line in attack_decks_input.split("\n") if line.strip()]
+
+                with st.spinner("Running simulations... this may take a while."):
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    avg_winrate, avg_winrates, removed_cards = loop.run_until_complete(
+                        run_optimization(attack_decks, defense_deck_hash)
+                    )
+
+                    # Store results in session state
+                    st.session_state["avg_winrate"] = avg_winrate
+                    st.session_state["avg_winrates"] = avg_winrates
+                    st.session_state["removed_cards"] = removed_cards
+
+        # Display results if available
+        if "avg_winrate" in st.session_state:
+            st.write(f"**Winrate of Current Deck:** {st.session_state['avg_winrate']:.2f}%")
+
+            st.subheader("Winrates After Removing Each Card")
+            winrate_text = " | ".join(
+                f"`{card}` → **{winrate:.2f}%**" for card, winrate in zip(
+                    st.session_state["removed_cards"], st.session_state["avg_winrates"].values()
+                )
             )
-
-        st.write(f"**Average Winrate Before:** {avg_winrate:.2f}%")
-        st.write(f"**Weakest Card:** {weakest_card} (Winrate: {new_winrate:.2f}%)")
-        st.write(f"**New Optimized Deck Hash:** `{new_deck_hash}`")
+            st.markdown(winrate_text, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
