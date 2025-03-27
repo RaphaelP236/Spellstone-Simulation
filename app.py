@@ -21,8 +21,8 @@ if sys.platform == "win32":
 nest_asyncio.apply()
 
 # Define constants
-bge = "9C!C"
-BGE = "9C!CJI"
+bge = "!C~C"
+BGE = "!C~CJI"
 tower_type = 501
 
 heroes = {
@@ -131,6 +131,7 @@ async def get_card_name_from_hash(card_hash, context):
             }});
 
             // Check if RUNES is available and search for the rune name
+            
             Object.values(RUNES).forEach(c => {{
                 if (c.id == rune_id) {{
                     cardRune = c.name;
@@ -155,11 +156,13 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, cont
         attack_decks = opponents_decks
         defence_deck = your_deck
         len_hash = len(defence_deck)
+        st.write(len_hash)
         card_hashes = [defence_deck[i:i + 5] for i in range(5, len_hash, 5)]  # Assuming 5-char card hashes
     elif deck_type == 'Offence':
         defence_decks = opponents_decks
         attack_deck = your_deck
         len_hash = len(attack_deck)
+        st.write(len_hash)
         card_hashes = [attack_deck[i:i + 5] for i in range(5, len_hash, 5)]  # Assuming 5-char card hashes
     seen_card_hashes = set()
     modified_decks = []
