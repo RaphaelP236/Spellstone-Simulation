@@ -182,7 +182,6 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, cont
         elif deck_type == "Offence":
             modified_deck = attack_deck.replace(card_hash, "", 1)
         modified_decks.append(modified_deck)
-        st.write(card_name)
         removed_names.append(card_name)  # Store card names
         removed_runes.append(card_rune)
 
