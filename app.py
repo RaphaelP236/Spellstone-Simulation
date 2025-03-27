@@ -156,13 +156,11 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, cont
         attack_decks = opponents_decks
         defence_deck = your_deck
         len_hash = len(defence_deck)
-        st.write(len_hash)
         card_hashes = [defence_deck[i:i + 5] for i in range(5, len_hash, 5)]  # Assuming 5-char card hashes
     elif deck_type == 'Offence':
         defence_decks = opponents_decks
         attack_deck = your_deck
         len_hash = len(attack_deck)
-        st.write(len_hash)
         card_hashes = [attack_deck[i:i + 5] for i in range(5, len_hash, 5)]  # Assuming 5-char card hashes
     seen_card_hashes = set()
     modified_decks = []
@@ -184,6 +182,7 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, cont
         elif deck_type == "Offence":
             modified_deck = attack_deck.replace(card_hash, "", 1)
         modified_decks.append(modified_deck)
+        st.write(card_name)
         removed_names.append(card_name)  # Store card names
         removed_runes.append(card_rune)
 
