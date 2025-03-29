@@ -88,7 +88,7 @@ async def simulate_pair(pair, battle_type, context, semaphore, pbar):
 async def run_simulations_parallel(attack_decks, defense_decks, battle_type):
     deck_pairs = [(attack_deck, defense_deck) for attack_deck in attack_decks for defense_deck in defense_decks]
     total_simulations = len(deck_pairs)
-    semaphore = asyncio.Semaphore(20)
+    semaphore = asyncio.Semaphore(8)
 
     with tqdm(total=total_simulations, desc="Simulations Progress", unit="sim") as pbar:
         async with async_playwright() as p:
