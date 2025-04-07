@@ -227,7 +227,7 @@ async def main():
     # Input fields and Run button (Left side)
     with col1:
         st.header("Decks")
-        your_deck_hash = st.text_input("Your deck")
+        your_deck_hash = st.text_input("Your Deck")
         opponents_decks_input = st.text_area("Decks of opponents (one hash per line)")
         replacement_card_hash = st.text_input("Hashes of Replacement cards")
         numb_sims = st.text_input("Number of Simulations:", value = 10000)
@@ -280,6 +280,10 @@ async def main():
                 st.write(f"**Winrate of Current Deck:** {st.session_state['avg_winrate']:.2f}%")
 
                 st.subheader("Winrates After Removing Each Card")
+                if deck_type == "Defence":
+                    st.caption("High winrate equals a good card was removed.")
+                if deck_type == "Offence":
+                    st.caption("Low winrate equals a good card was removed.")
 
                 # Create a list of strings with each card and winrate on a new line
                 winrate_text = [
@@ -352,6 +356,10 @@ async def main():
                         await browser.close()
 
             st.subheader("Best Hero")
+            if deck_type == "Defence":
+                st.caption("Low winrate equals a good hero.")
+            if deck_type == "Offence":
+                st.caption("High winrate equals a good hero.")
             winrate_text = [
                 f"`{name}` → **{winrate:.2f}%**"
                 for name, winrate in zip(hero_names,average_winrates.values())
@@ -426,6 +434,10 @@ async def main():
 
 
                         st.subheader("Winrates of Replacement Cards")
+                        if deck_type == "Defence":
+                            st.caption("Low winrate equals a good replacement card.")
+                        if deck_type == "Offence":
+                            st.caption("High winrate equals a good replacement card.")
 
                         st.session_state["avg_winrates"] = average_winrates
                         st.session_state["card_names"] = card_names
