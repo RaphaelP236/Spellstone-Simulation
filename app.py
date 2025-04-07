@@ -397,7 +397,6 @@ async def main():
                             card_name, card_rune = await get_card_name_from_hash(card_hash, context)
                             card_names[card_hash] = card_name
                             card_runes[card_hash] = card_rune
-                        st.write(card_names)
 
 
                         if deck_type == "Defence":
