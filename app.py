@@ -7,6 +7,8 @@ import nest_asyncio
 import subprocess
 from collections import defaultdict
 
+from sim_tool import offense_decks
+
 # Ensure Playwright is installed and necessary browsers are available
 try:
     import playwright
@@ -228,14 +230,20 @@ async def main():
         st.header("Decks")
         your_deck_hash = st.text_input("Your deck")
         opponents_decks_input = st.text_area("Decks of opponents (one hash per line)")
+        replacement_card_hash = st.text_input("Hashes of Replacement cards")
         numb_sims = st.text_input("Number of Simulations:", value = 10000)
         c1, c2 = st.columns(2)
         with c1:
             deck_type = st.radio("What deck do you want to optimze?", ["Offence", "Defence"])
-            run_button_cards = st.button("Run Card Optimization")
         with c2:
             battle_type = st.radio("Type of battles", ["Tower Battles", "Arena"])
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            run_button_cards = st.button("Run Card Optimization")
+        with c2:
             run_button_hero = st.button("Run Hero Optimization")
+        with c3:
+            run_button_replacement = st.button("Find Replacement")
 
     # Results (Right side)
     with col2:
@@ -366,7 +374,89 @@ async def main():
                 for text in column_2:
                     st.write(text)
 
+        if run_button_replacement:
+            if not opponents_decks_input or not your_deck_hash:
+                st.error("Please enter both attack deck hashes and a defense deck hash.")
+            else:
+                card_hashes = [replacement_card_hash[i:i + 5] for i in range(0, len(replacement_card_hash), 5)]
+                your_decks = [your_deck_hash + card for card in card_hashes]
+                opponents_decks = [line.strip() for line in opponents_decks_input.split("\n") if line.strip()]
 
+                with st.spinner("Running simulations... this may take a while."):
+
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                    async with async_playwright() as p:
+                        browser = await p.chromium.launch(headless=True, args=["--disable-gpu", "--no-sandbox"])
+                        context = await browser.new_context()
+
+                        card_names = {}
+                        card_runes = {}
+                        for card_hash in card_hashes:
+                            card_name, card_rune = await get_card_name_from_hash(card_hash, context)
+                            card_names[card_hash] = card_name
+                            card_runes[card_hash] = card_rune
+                        st.write(card_names)
+
+
+                        if deck_type == "Defence":
+                            results = await run_simulations_parallel(opponents_decks, your_decks, battle_type, numb_sims)
+                            # Dictionary to store win rates for each defense deck
+                            winrate_dict = defaultdict(list)
+
+                            # Populate the dictionary
+                            for attack_deck, defense_deck, winrate in results:
+                                winrate_dict[defense_deck].append(float(winrate.strip('%')))
+
+                            # Compute the average win rate for each defense deck
+                            average_winrates = {deck: sum(rates) / len(rates) for deck, rates in winrate_dict.items()}
+
+                        elif deck_type == "Offence":
+                            results = await run_simulations_parallel(your_decks, opponents_decks, battle_type, numb_sims)
+                            winrate_dict = defaultdict(list)
+
+                            # Populate the dictionary
+                            for attack_deck, defense_deck, winrate in results:
+                                winrate_dict[attack_deck].append(float(winrate.strip('%')))
+
+                            # Compute the average win rate for each attack deck
+                            average_winrates = {deck: sum(rates) / len(rates) for deck, rates in winrate_dict.items()}
+
+                        await browser.close()
+
+
+                        st.subheader("Winrates of Replacement Cards")
+
+                        st.session_state["avg_winrates"] = average_winrates
+                        st.session_state["card_names"] = card_names
+                        st.session_state["card_runes"] = card_runes
+
+                        # Create a list of strings with each card and winrate on a new line
+                        winrate_text = []
+                        for full_deck_hash, winrate in st.session_state["avg_winrates"].items():
+                            replaced_card_hash = full_deck_hash[-5:]  # Assumes the replaced card is at the end
+                            card_name = st.session_state["card_names"].get(replaced_card_hash, replaced_card_hash)
+                            card_rune = st.session_state["card_runes"].get(replaced_card_hash, replaced_card_hash)
+                            winrate_text.append(f"`{card_name} ({card_rune})` → **{winrate:.2f}%**")
+
+                        # Split the list into two halves for two columns
+                        column_1 = winrate_text[:8]
+                        column_2 = winrate_text[8:]
+
+                        # Create two columns for display
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            # Display the first half of the winrate_text list
+                            for text in column_1:
+                                st.write(text)
+
+                        with col2:
+                            # Display the second half of the winrate_text list
+                            for text in column_2:
+                                st.write(text)
 
 
 
