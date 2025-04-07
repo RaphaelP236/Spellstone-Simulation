@@ -228,6 +228,7 @@ async def main():
     with col1:
         st.header("Decks")
         your_deck_hash = st.text_input("Your Deck")
+        st.caption("Provide a deck hash with 1 card removed, when you try to find a replacemnt card for your deck.")
         opponents_decks_input = st.text_area("Decks of opponents (one hash per line)")
         replacement_card_hash = st.text_input("Hashes of Replacement cards")
         numb_sims = st.text_input("Number of Simulations:", value = 10000)
