@@ -7,7 +7,6 @@ import nest_asyncio
 import subprocess
 from collections import defaultdict
 
-from sim_tool import offense_decks
 
 # Ensure Playwright is installed and necessary browsers are available
 try:
