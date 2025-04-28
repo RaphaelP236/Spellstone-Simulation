@@ -61,7 +61,6 @@ async def run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE,
         url = f"https://vuzaldo.github.io/SIMSpellstone/Titans.html?deck1={attack_deck}&deck2={defense_deck}&mission_level=7&raid_level=25&siege&tower_level=18&tower_type={tower_type}&bges={BGE}&sims={numb_sims}&autostart"
     elif battle_type == "Arena":
         url = f"https://vuzaldo.github.io/SIMSpellstone/Titans.html?deck1={attack_deck}&deck2={defense_deck}&mission_level=7&raid_level=25&bges={BGE+"JI"}&sims={numb_sims}&autostart"
-        st.write(url)
     page = await context.new_page()
 
 
