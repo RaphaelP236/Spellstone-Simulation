@@ -22,7 +22,7 @@ if sys.platform == "win32":
 nest_asyncio.apply()
 
 # Define constants
-default_bge = "AD~C"
+default_bge = "ADBD"
 tower_type = 501
 
 heroes = {
