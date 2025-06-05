@@ -1,11 +1,17 @@
 import streamlit as st
 import asyncio
 import sys
+import json
 from playwright.async_api import async_playwright
 from tqdm.asyncio import tqdm
 import nest_asyncio
 import subprocess
 from collections import defaultdict
+
+
+# Load towers from JSON
+with open("towers.json", "r") as f:
+    towers = json.load(f)  # Expects a dict {tower_id: tower_name}
 
 
 # Ensure Playwright is installed and necessary browsers are available
@@ -23,7 +29,6 @@ nest_asyncio.apply()
 
 # Define constants
 default_bge = "ADBD"
-tower_type = 501
 
 heroes = {
     "Samael": "gmQAA",
@@ -56,13 +61,12 @@ async def load_page_with_retry(page, url, retries=3):
     return False
 
 
-async def run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE, context):
+async def run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE, tower_type, context):
     if battle_type == "Tower Battles":
         url = f"https://vuzaldo.github.io/SIMSpellstone/Titans.html?deck1={attack_deck}&deck2={defense_deck}&mission_level=7&raid_level=25&siege&tower_level=18&tower_type={tower_type}&bges={BGE}&sims={numb_sims}&autostart"
     elif battle_type == "Arena":
         url = f"https://vuzaldo.github.io/SIMSpellstone/Titans.html?deck1={attack_deck}&deck2={defense_deck}&mission_level=7&raid_level=25&bges={BGE+"JI"}&sims={numb_sims}&autostart"
     page = await context.new_page()
-
 
     try:
         success = await load_page_with_retry(page, url)
@@ -78,15 +82,15 @@ async def run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE,
         await page.close()
 
 
-async def simulate_pair(pair, battle_type, numb_sims, BGE, context, semaphore, pbar):
+async def simulate_pair(pair, battle_type, numb_sims, BGE, tower_type, context, semaphore, pbar):
     async with semaphore:
         attack_deck, defense_deck = pair
-        result = await run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE, context)
+        result = await run_simulation(attack_deck, defense_deck, battle_type, numb_sims, BGE, tower_type, context)
         pbar.update(1)
         return (attack_deck, defense_deck, result)
 
 
-async def run_simulations_parallel(attack_decks, defense_decks, battle_type, numb_sims, BGE):
+async def run_simulations_parallel(attack_decks, defense_decks, battle_type, numb_sims, BGE, tower_type):
     deck_pairs = [(attack_deck, defense_deck) for attack_deck in attack_decks for defense_deck in defense_decks]
     total_simulations = len(deck_pairs)
     semaphore = asyncio.Semaphore(8)
@@ -95,7 +99,7 @@ async def run_simulations_parallel(attack_decks, defense_decks, battle_type, num
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True, args=["--disable-gpu", "--no-sandbox"])
             context = await browser.new_context()
-            tasks = [simulate_pair(pair, battle_type, numb_sims, BGE, context, semaphore, pbar) for pair in deck_pairs]
+            tasks = [simulate_pair(pair, battle_type, numb_sims, BGE, tower_type, context, semaphore, pbar) for pair in deck_pairs]
             results = await asyncio.gather(*tasks)
             await browser.close()
 
@@ -151,7 +155,7 @@ async def get_card_name_from_hash(card_hash, context):
         return [card_name, card_rune]
 
 
-async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, numb_sims, BGE, context):
+async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, numb_sims, BGE, tower_type, context):
 
     if deck_type == "Defence":
         attack_decks = opponents_decks
@@ -189,13 +193,13 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, numb
 
 
     if deck_type == "Defence":
-        initial_results = await run_simulations_parallel(attack_decks, [your_deck], battle_type, numb_sims, BGE)
+        initial_results = await run_simulations_parallel(attack_decks, [your_deck], battle_type, numb_sims, BGE, tower_type)
         winrates = [float(result[2].strip('%')) for result in initial_results if result[2]]
-        results = await run_simulations_parallel(attack_decks, modified_decks, battle_type, numb_sims, BGE)
+        results = await run_simulations_parallel(attack_decks, modified_decks, battle_type, numb_sims, BGE, tower_type)
     elif deck_type == "Offence":
-        initial_results = await run_simulations_parallel([your_deck], defence_decks, battle_type, numb_sims, BGE)
+        initial_results = await run_simulations_parallel([your_deck], defence_decks, battle_type, numb_sims, BGE, tower_type)
         winrates = [float(result[2].strip('%')) for result in initial_results if result[2]]
-        results = await run_simulations_parallel(modified_decks, defence_decks, battle_type, numb_sims, BGE)
+        results = await run_simulations_parallel(modified_decks, defence_decks, battle_type, numb_sims, BGE, tower_type)
     avg_winrate = sum(winrates) / len(winrates) if winrates else 0
 
     avg_winrates = {}
@@ -212,8 +216,8 @@ async def optimize_deck(your_deck, opponents_decks, deck_type, battle_type, numb
     return avg_winrate, avg_winrates, removed_names, removed_runes
 
 
-async def run_optimization(attack_decks, defense_deck_hash, deck_type, battle_type, numb_sims, BGE, context):
-    return await optimize_deck(attack_decks, defense_deck_hash, deck_type, battle_type, numb_sims, BGE, context)
+async def run_optimization(attack_decks, defense_deck_hash, deck_type, battle_type, numb_sims, BGE, tower_type, context):
+    return await optimize_deck(attack_decks, defense_deck_hash, deck_type, battle_type, numb_sims, BGE, tower_type, context)
 
 
 st.set_page_config(layout="wide")  # Ensure full-width layout
@@ -231,13 +235,23 @@ async def main():
         st.caption("Provide a deck hash with 1 card removed, when you try to find a replacemnt card for your deck.")
         opponents_decks_input = st.text_area("Decks of opponents (one hash per line)")
         replacement_card_hash = st.text_input("Hashes of Replacement cards")
-        c1, c2 = st.columns(2)
-        with c1:
+        a1, a2 = st.columns(2)
+        with a1:
             numb_sims = st.text_input("Number of Simulations:", value=10000)
-            deck_type = st.radio("What deck do you want to optimze?", ["Offence", "Defence"])
-        with c2:
+        with a2:
             BGE = st.text_input("BGE:", value=default_bge)
+        b1, b2, b3 = st.columns(3)
+        with b1:
+            deck_type = st.radio("What deck do you want to optimze?", ["Offence", "Defence"])
+        with b2:
             battle_type = st.radio("Type of battles", ["Tower Battles", "Arena"])
+        with b3:
+            # Tower selection box
+            tower_selection_label = "Select Tower Type"
+            tower_names = [tower["name"] for tower in towers]
+            tower_ids = [tower["id"] for tower in towers]
+            selected_tower_name = st.selectbox(tower_selection_label, tower_names)
+            selected_tower_id = tower_ids[tower_names.index(selected_tower_name)]
         c1, c2, c3 = st.columns(3)
         with c1:
             run_button_cards = st.button("Run Card Optimization")
@@ -267,7 +281,7 @@ async def main():
                         browser = await p.chromium.launch(headless=True, args=["--disable-gpu", "--no-sandbox"])
                         context = await browser.new_context()
 
-                        avg_winrate, avg_winrates, removed_names, removed_runes = await run_optimization(your_deck_hash, opponents_decks, deck_type, battle_type, numb_sims, BGE, context)
+                        avg_winrate, avg_winrates, removed_names, removed_runes = await run_optimization(your_deck_hash, opponents_decks, deck_type, battle_type, numb_sims, BGE, selected_tower_id, context)
 
                         await browser.close()
 
@@ -333,7 +347,7 @@ async def main():
                         hero_names = list(heroes.keys())
 
                         if deck_type == "Defence":
-                            results = await run_simulations_parallel( opponents_decks, your_deck, battle_type, numb_sims, BGE)
+                            results = await run_simulations_parallel( opponents_decks, your_deck, battle_type, numb_sims, BGE, selected_tower_id)
                             # Dictionary to store win rates for each defense deck
                             winrate_dict = defaultdict(list)
 
@@ -345,7 +359,7 @@ async def main():
                             average_winrates = {deck: sum(rates) / len(rates) for deck, rates in winrate_dict.items()}
 
                         elif deck_type == "Offence":
-                            results = await run_simulations_parallel(your_deck, opponents_decks, battle_type, numb_sims, BGE)
+                            results = await run_simulations_parallel(your_deck, opponents_decks, battle_type, numb_sims, BGE, selected_tower_id)
                             winrate_dict = defaultdict(list)
 
                             # Populate the dictionary
@@ -410,7 +424,7 @@ async def main():
 
 
                         if deck_type == "Defence":
-                            results = await run_simulations_parallel(opponents_decks, your_decks, battle_type, numb_sims, BGE)
+                            results = await run_simulations_parallel(opponents_decks, your_decks, battle_type, numb_sims, BGE, selected_tower_id)
                             # Dictionary to store win rates for each defense deck
                             winrate_dict = defaultdict(list)
 
@@ -422,7 +436,7 @@ async def main():
                             average_winrates = {deck: sum(rates) / len(rates) for deck, rates in winrate_dict.items()}
 
                         elif deck_type == "Offence":
-                            results = await run_simulations_parallel(your_decks, opponents_decks, battle_type, numb_sims, BGE)
+                            results = await run_simulations_parallel(your_decks, opponents_decks, battle_type, numb_sims, BGE, selected_tower_id)
                             winrate_dict = defaultdict(list)
 
                             # Populate the dictionary
