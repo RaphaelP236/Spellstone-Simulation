@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Castle Siege",
+    "id": "501"
+  },
+  {
+    "name": "Cannon Siege",
+    "id": "502"
+  },
+  {
+    "name": "Tree of Life",
+    "id": "506"
+  },
+  {
+    "name": "Fortified Tower",
+    "id": "509"
+  },
+  {
+    "name": "Defender's Castle",
+    "id": "512"
+  },
+  {
+    "name": "Warding Tower",
+    "id": "565"
+  },
+  {
+    "name": "Tree of Eternity",
+    "id": "566"
+  },
+  {
+    "name": "Swarming Tower",
+    "id": "568"
+  },
+  {
+    "name": "Ninja Frog",
+    "id": "581"
+  },
+  {
+    "name": "Redoubtable Tusker",
+    "id": "582"
+  },
+  {
+    "name": "Double Tower",
+    "id": "501,502"
+  }
+]
