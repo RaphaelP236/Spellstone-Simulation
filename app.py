@@ -28,7 +28,7 @@ if sys.platform == "win32":
 nest_asyncio.apply()
 
 # Define constants
-default_bge = "ADBD"
+default_bge = "BDCD"
 
 heroes = {
     "Samael": "gmQAA",
